@@ -24,12 +24,10 @@ int xval;
 int yval;
 int zbut;
 int cbut;
+int cnt = 0;
 
 void setup()
 { 
-  Serial.begin(9600);
-  Serial.print("Setup");
-  Serial.println();
   pinMode(enablePin1, OUTPUT);
   pinMode(motor1CP1, OUTPUT);
   pinMode(motor1CP2, OUTPUT);
@@ -62,50 +60,45 @@ void loop()
 
   if (vw_get_message(buf, &buflen)) // Non-blocking
   {
+    cnt = 0;
     // Flash status LED to show received data
-    xval = (buf[1]<<8)+buf[0];;
+    xval = (buf[1]<<8)+buf[0];
     yval = (buf[3]<<8)+buf[2];
-    zbut = (buf[5]<<8)+buf[4];;
-    cbut = (buf[7]<<8)+buf[6];;
-    
-    Serial.print("The x-value is:");
-    Serial.print(xval);
-    Serial.println();
-    Serial.print("The y-value is:");
-    Serial.print(yval);
-    Serial.println();
-    Serial.print("The z-but is:");
-    Serial.print(zbut);
-    Serial.println();
-    Serial.print("The c-but is:");
-    Serial.print(cbut);
-    Serial.println();
+    zbut = (buf[5]<<8)+buf[4];
+    cbut = (buf[7]<<8)+buf[6];
+ 
     moveDifferential(map(xval,30,220,-100,100),map(yval,30,220,-100,100));
     startSpinFeeder(zbut, cbut);
+  }
+  else {
+    cnt++;
+    if (cnt>100000) {
+      moveDifferential(0,0);
+      startSpinFeeder(1,1);
+    }
   }
 }  
 
 void startSpinFeeder(int zbut, int cbut) {
-  Serial.print("Started spin feeder");
+  int spinFeederSpeed = 255;
   if (zbut==0) {
-    Serial.print("Zbutton pressed");
     digitalWrite(motor3CP1, LOW);
     digitalWrite(motor3CP2, HIGH);
-    analogWrite(enablePin3, 255);
+    analogWrite(enablePin3, spinFeederSpeed);
   }
   else if (cbut==0) {
-    Serial.print("Cbutton pressed");
     digitalWrite(motor3CP1, HIGH);
     digitalWrite(motor3CP2, LOW);
-    analogWrite(enablePin3, 255);
+    analogWrite(enablePin3, spinFeederSpeed);
   } 
   else {
-    analogWrite(enablePin3, 0);
+    spinFeederSpeed = 0;
   }
+    analogWrite(enablePin3, spinFeederSpeed);
 }
 
 void moveDifferential(int xdir, int ydir) {   
-  int moveSpeed = 255;
+  int driveMotorSpeed = 200;
   if (ydir>=ymax) {
     moveForward();
   }
@@ -119,10 +112,10 @@ void moveDifferential(int xdir, int ydir) {
     moveLeft();
   }
   else {
-    moveSpeed=0;
+    driveMotorSpeed=0;
   }
-  analogWrite(enablePin2, moveSpeed);
-  analogWrite(enablePin1, moveSpeed); 
+  analogWrite(enablePin2, driveMotorSpeed);
+  analogWrite(enablePin1, driveMotorSpeed); 
 }
 
 int deadBandFilter(int value) {  
